@@ -1,833 +1,876 @@
-/* =========================================================
-   KHAN ABDUL KALAM — PORTFOLIO
-   INTERACTIONS / ANIMATIONS
-========================================================= */
+/* ==========================================================
+   KHAN ABDUL KALAM — PORTFOLIO INTERACTIONS
+   Vanilla JavaScript · Accessible · Responsive
+========================================================== */
+
+"use strict";
+
+(() => {
+
+  /* =========================================
+     01. SELECTORS & GLOBAL SETTINGS
+  ========================================== */
+
+  const $ = (selector, scope = document) =>
+    scope.querySelector(selector);
+
+  const $$ = (selector, scope = document) =>
+    [...scope.querySelectorAll(selector)];
+
+  const body = document.body;
+
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
+  const finePointer = window.matchMedia(
+    "(pointer: fine)"
+  ).matches;
 
 
-/* =========================================================
-   SELECTORS
-========================================================= */
+  /* Main elements */
 
-const $ = (selector) => document.querySelector(selector);
+  const intro = $("#cinematicIntro");
+  const skipIntro = $("#skipIntro");
 
-const $$ = (selector) => document.querySelectorAll(selector);
+  const progressBar = $("#scrollProgress");
+  const header = $("#siteHeader");
 
+  const menu = $("#navLinks");
+  const menuToggle = $("#menuToggle");
 
-/* =========================================================
-   PRELOADER
-========================================================= */
+  const themeToggle = $("#themeToggle");
 
-window.addEventListener("load", () => {
+  const typingText = $("#typingText");
 
-    const preloader = $("#preloader");
-
-    setTimeout(() => {
-
-        preloader.style.opacity = "0";
-        preloader.style.visibility = "hidden";
-
-    }, 1700);
-
-});
+  const backToTop = $("#backToTop");
+  const currentYear = $("#currentYear");
 
 
-/* =========================================================
-   CURRENT YEAR
-========================================================= */
+  /* =========================================
+     02. CINEMATIC INTRO
+  ========================================== */
 
-const year = $("#year");
+  let introTimer;
 
-if (year) {
+  const closeIntro = () => {
 
-    year.textContent =
-        new Date().getFullYear();
+    if (!intro || intro.classList.contains("intro-hidden")) {
+      return;
+    }
 
-}
+    window.clearTimeout(introTimer);
 
+    intro.classList.add("intro-hidden");
 
-/* =========================================================
-   MATRIX BACKGROUND
-========================================================= */
+    body.classList.remove("intro-active");
 
-const canvas = $("#matrix");
+    if (skipIntro) {
+      skipIntro.setAttribute("aria-hidden", "true");
+      skipIntro.tabIndex = -1;
+    }
 
-if (canvas) {
-
-    const ctx =
-        canvas.getContext("2d");
-
-    let width =
-        canvas.width =
-        window.innerWidth;
-
-    let height =
-        canvas.height =
-        window.innerHeight;
-
-    const characters =
-        "01ABCDEFGHIJKLMNOPQRSTUVWXYZ<>/{}[]$#@";
-
-    const fontSize = 13;
-
-    let columns =
-        Math.floor(width / fontSize);
-
-    let drops =
-        new Array(columns).fill(1);
+  };
 
 
-    function resizeMatrix() {
+  if (intro) {
 
-        width =
-            canvas.width =
-            window.innerWidth;
+    body.classList.add("intro-active");
 
-        height =
-            canvas.height =
-            window.innerHeight;
+    if (reducedMotion) {
+      closeIntro();
+    } else {
 
-        columns =
-            Math.floor(width / fontSize);
-
-        drops =
-            new Array(columns).fill(1);
+      introTimer = window.setTimeout(
+        closeIntro,
+        2850
+      );
 
     }
 
-
-    window.addEventListener(
-        "resize",
-        resizeMatrix
-    );
+  }
 
 
-    function drawMatrix() {
+  /* Skip intro button */
 
-        /*
-         * Slight transparent black layer
-         * creates the fading trail.
-         */
-
-        ctx.fillStyle =
-            "rgba(5, 5, 5, 0.075)";
-
-        ctx.fillRect(
-            0,
-            0,
-            width,
-            height
-        );
+  skipIntro?.addEventListener("click", closeIntro);
 
 
-        ctx.fillStyle =
-            "#c8ff3d";
+  /* Escape key */
 
-        ctx.font =
-            `${fontSize}px monospace`;
+  document.addEventListener("keydown", (event) => {
 
+    if (event.key === "Escape") {
 
-        for (
-            let i = 0;
-            i < drops.length;
-            i++
-        ) {
+      closeIntro();
 
-            const character =
-                characters[
-                    Math.floor(
-                        Math.random() *
-                        characters.length
-                    )
-                ];
-
-
-            ctx.fillText(
-                character,
-                i * fontSize,
-                drops[i] * fontSize
-            );
-
-
-            /*
-             * Random reset gives the matrix
-             * a natural coding-screen effect.
-             */
-
-            if (
-                drops[i] * fontSize >
-                    height &&
-                Math.random() > 0.975
-            ) {
-
-                drops[i] = 0;
-
-            }
-
-
-            drops[i]++;
-
-        }
+      closeMobileMenu();
 
     }
 
+  });
 
-    setInterval(
-        drawMatrix,
-        55
+
+  /* =========================================
+     03. LIGHT / DARK THEME SWITCHER
+  ========================================== */
+
+  const THEME_KEY = "kak-portfolio-theme";
+
+
+  const applyTheme = (theme) => {
+
+    const light = theme === "light";
+
+    body.classList.toggle("light-theme", light);
+
+    if (themeToggle) {
+
+      themeToggle.setAttribute(
+        "aria-pressed",
+        String(light)
+      );
+
+      themeToggle.setAttribute(
+        "aria-label",
+        light
+          ? "Switch to dark theme"
+          : "Switch to light theme"
+      );
+
+      themeToggle.title = light
+        ? "Switch to dark theme"
+        : "Switch to light theme";
+
+
+      const icon = $(
+        "[data-theme-icon]",
+        themeToggle
+      );
+
+      if (icon) {
+        icon.textContent = light ? "☾" : "☼";
+      }
+
+    }
+
+  };
+
+
+  /* Load saved theme */
+
+  let savedTheme = null;
+
+  try {
+
+    savedTheme = localStorage.getItem(THEME_KEY);
+
+  } catch (error) {
+
+    savedTheme = null;
+
+  }
+
+
+  applyTheme(
+    savedTheme === "light" ? "light" : "dark"
+  );
+
+
+  /* Theme toggle click */
+
+  themeToggle?.addEventListener("click", () => {
+
+    const nextTheme = body.classList.contains("light-theme")
+      ? "dark"
+      : "light";
+
+    applyTheme(nextTheme);
+
+    try {
+
+      localStorage.setItem(
+        THEME_KEY,
+        nextTheme
+      );
+
+    } catch (error) {
+
+      /* Local storage may be unavailable. */
+
+    }
+
+  });
+
+
+  /* =========================================
+     04. MOBILE NAVIGATION
+  ========================================== */
+
+  function closeMobileMenu() {
+
+    menu?.classList.remove("open");
+
+    menuToggle?.classList.remove("active");
+
+    menuToggle?.setAttribute(
+      "aria-expanded",
+      "false"
     );
 
-}
+    menuToggle?.setAttribute(
+      "aria-label",
+      "Open navigation menu"
+    );
+
+    body.classList.remove("menu-open");
+
+  }
 
 
-/* =========================================================
-   SCROLL PROGRESS
-========================================================= */
+  function toggleMobileMenu() {
 
-const scrollProgress =
-    $("#scrollProgress");
+    if (!menu || !menuToggle) {
+      return;
+    }
 
+    const isOpen = !menu.classList.contains("open");
 
-function updateScrollProgress() {
+    menu.classList.toggle("open", isOpen);
 
-    if (!scrollProgress) return;
+    menuToggle.classList.toggle("active", isOpen);
 
+    menuToggle.setAttribute(
+      "aria-expanded",
+      String(isOpen)
+    );
 
-    const scrollTop =
-        window.scrollY;
+    menuToggle.setAttribute(
+      "aria-label",
+      isOpen
+        ? "Close navigation menu"
+        : "Open navigation menu"
+    );
 
-    const documentHeight =
-        document.documentElement.scrollHeight -
-        window.innerHeight;
+    body.classList.toggle("menu-open", isOpen);
 
-
-    const percentage =
-        documentHeight > 0
-            ? (scrollTop / documentHeight) * 100
-            : 0;
-
-
-    scrollProgress.style.width =
-        `${percentage}%`;
-
-}
+  }
 
 
-window.addEventListener(
-    "scroll",
-    updateScrollProgress,
+  /* Menu button */
+
+  menuToggle?.addEventListener(
+    "click",
+    toggleMobileMenu
+  );
+
+
+  /* Close menu after selecting a navigation link */
+
+  $$('.nav-links a[href^="#"]').forEach((link) => {
+
+    link.addEventListener(
+      "click",
+      closeMobileMenu
+    );
+
+  });
+
+
+  /* Close menu when clicking outside */
+
+  document.addEventListener("click", (event) => {
+
+    if (
+      menu?.classList.contains("open") &&
+      !menu.contains(event.target) &&
+      !menuToggle?.contains(event.target)
+    ) {
+
+      closeMobileMenu();
+
+    }
+
+  });
+
+
+  /* Close menu on desktop resize */
+
+  window.addEventListener(
+    "resize",
+    () => {
+
+      if (window.innerWidth > 900) {
+        closeMobileMenu();
+      }
+
+    },
     { passive: true }
-);
-
-updateScrollProgress();
+  );
 
 
-/* =========================================================
-   MOBILE NAVIGATION
-========================================================= */
+  /* =========================================
+     05. TYPING ANIMATION
+  ========================================== */
 
-const menuButton =
-    $("#menuButton");
-
-const navMenu =
-    $("#navMenu");
-
-
-if (menuButton && navMenu) {
-
-    menuButton.addEventListener(
-        "click",
-        () => {
-
-            navMenu.classList.toggle(
-                "mobile-open"
-            );
-
-        }
-    );
+  const words = [
+    "Developer",
+    "Problem Solver",
+    "Creative Thinker",
+    "IT Engineering Student"
+  ];
 
 
-    /*
-     * Close mobile menu when
-     * a navigation link is clicked.
-     */
+  if (typingText) {
 
-    navMenu
-        .querySelectorAll("a")
-        .forEach((link) => {
+    if (reducedMotion) {
 
-            link.addEventListener(
-                "click",
-                () => {
-
-                    navMenu.classList.remove(
-                        "mobile-open"
-                    );
-
-                }
-            );
-
-        });
-
-}
-
-
-/* =========================================================
-   TYPING COMMAND
-========================================================= */
-
-const typingCommand =
-    $("#typingCommand");
-
-
-const commands = [
-
-    "build --something-great",
-
-    "git push origin future",
-
-    "npm run create",
-
-    "ship --with-intent",
-
-    "code --solve-problems"
-
-];
-
-
-let commandIndex = 0;
-
-let characterIndex = 0;
-
-let deleting = false;
-
-
-function typeCommand() {
-
-    if (!typingCommand) return;
-
-
-    const currentCommand =
-        commands[commandIndex];
-
-
-    if (!deleting) {
-
-        typingCommand.textContent =
-            currentCommand.substring(
-                0,
-                characterIndex
-            );
-
-        characterIndex++;
-
-
-        if (
-            characterIndex >
-            currentCommand.length
-        ) {
-
-            deleting = true;
-
-            setTimeout(
-                typeCommand,
-                1100
-            );
-
-            return;
-
-        }
-
+      typingText.textContent = words[0];
 
     } else {
 
-        typingCommand.textContent =
-            currentCommand.substring(
-                0,
-                characterIndex
-            );
+      let word = 0;
+      let char = 0;
 
-        characterIndex--;
+      let deleting = false;
+      let timer;
 
 
-        if (characterIndex < 0) {
+      const type = () => {
 
-            deleting = false;
+        const current = words[word];
 
-            characterIndex = 0;
+        char += deleting ? -1 : 1;
 
-            commandIndex =
-                (commandIndex + 1) %
-                commands.length;
-
-        }
-
-    }
-
-
-    setTimeout(
-        typeCommand,
-        deleting ? 35 : 65
-    );
-
-}
-
-
-setTimeout(
-    typeCommand,
-    1900
-);
-
-
-/* =========================================================
-   SCROLL REVEAL
-========================================================= */
-
-const revealElements =
-    $$(".section, .project-card, .skill-card, .timeline-item");
-
-
-const revealObserver =
-    new IntersectionObserver(
-        (entries) => {
-
-            entries.forEach(
-                (entry) => {
-
-                    if (
-                        entry.isIntersecting
-                    ) {
-
-                        entry.target.classList.add(
-                            "revealed"
-                        );
-
-                        revealObserver.unobserve(
-                            entry.target
-                        );
-
-                    }
-
-                }
-            );
-
-        },
-        {
-            threshold: 0.12
-        }
-    );
-
-
-revealElements.forEach(
-    (element) => {
-
-        element.classList.add(
-            "reveal"
-        );
-
-        revealObserver.observe(
-            element
-        );
-
-    }
-);
-
-
-/* =========================================================
-   ADD REVEAL CSS
-========================================================= */
-
-const revealStyle =
-    document.createElement("style");
-
-
-revealStyle.textContent = `
-
-    .reveal {
-
-        opacity: 0;
-
-        transform:
-            translateY(35px);
-
-        transition:
-            opacity 0.8s ease,
-            transform 0.8s ease;
-
-    }
-
-
-    .revealed {
-
-        opacity: 1;
-
-        transform:
-            translateY(0);
-
-    }
-
-`;
-
-
-document.head.appendChild(
-    revealStyle
-);
-
-
-/* =========================================================
-   PROJECT 3D TILT
-========================================================= */
-
-const projectCards =
-    $$(".project-card");
-
-
-projectCards.forEach(
-    (card) => {
-
-        card.addEventListener(
-            "mousemove",
-            (event) => {
-
-                /*
-                 * Don't apply the heavy effect
-                 * on small screens.
-                 */
-
-                if (
-                    window.innerWidth < 800
-                ) return;
-
-
-                const rect =
-                    card.getBoundingClientRect();
-
-
-                const x =
-                    event.clientX -
-                    rect.left;
-
-
-                const y =
-                    event.clientY -
-                    rect.top;
-
-
-                const centerX =
-                    rect.width / 2;
-
-
-                const centerY =
-                    rect.height / 2;
-
-
-                const rotateX =
-                    ((y - centerY) /
-                        centerY) *
-                    -2.5;
-
-
-                const rotateY =
-                    ((x - centerX) /
-                        centerX) *
-                    2.5;
-
-
-                card.style.transform =
-                    `perspective(900px)
-                     rotateX(${rotateX}deg)
-                     rotateY(${rotateY}deg)
-                     translateY(-7px)`;
-
-            }
+        typingText.textContent = current.slice(
+          0,
+          char
         );
 
 
-        card.addEventListener(
-            "mouseleave",
-            () => {
+        let delay = deleting ? 34 : 68;
 
-                card.style.transform =
-                    "";
-
-            }
-        );
-
-    }
-);
-
-
-/* =========================================================
-   PROFILE PARALLAX
-========================================================= */
-
-const profileCard =
-    $(".profile-card");
-
-
-window.addEventListener(
-    "mousemove",
-    (event) => {
 
         if (
-            !profileCard ||
-            window.innerWidth < 900
-        ) return;
+          !deleting &&
+          char === current.length
+        ) {
 
+          deleting = true;
+
+          delay = 1450;
+
+        } else if (
+          deleting &&
+          char === 0
+        ) {
+
+          deleting = false;
+
+          word = (word + 1) % words.length;
+
+          delay = 320;
+
+        }
+
+
+        timer = window.setTimeout(
+          type,
+          delay
+        );
+
+      };
+
+
+      timer = window.setTimeout(
+        type,
+        550
+      );
+
+
+      document.addEventListener(
+        "visibilitychange",
+        () => {
+
+          if (document.hidden) {
+            window.clearTimeout(timer);
+          }
+
+        }
+      );
+
+    }
+
+  }
+    /* =========================================
+     06. SCROLL REVEAL ANIMATIONS
+  ========================================== */
+
+  const revealItems = $$(
+    ".reveal, .reveal-left, .reveal-right"
+  );
+
+
+  if (
+    "IntersectionObserver" in window &&
+    !reducedMotion
+  ) {
+
+    const revealObserver = new IntersectionObserver(
+      (entries, observer) => {
+
+        entries.forEach((entry) => {
+
+          if (!entry.isIntersecting) {
+            return;
+          }
+
+          entry.target.classList.add("active");
+
+          observer.unobserve(entry.target);
+
+        });
+
+      },
+      {
+        threshold: 0.12,
+        rootMargin: "0px 0px -40px 0px"
+      }
+    );
+
+
+    revealItems.forEach((item) => {
+
+      revealObserver.observe(item);
+
+    });
+
+  } else {
+
+    revealItems.forEach((item) => {
+
+      item.classList.add("active");
+
+    });
+
+  }
+
+
+  /* =========================================
+     07. STAGGERED CARD ANIMATIONS
+  ========================================== */
+
+  [
+    ".profile-grid",
+    ".project-grid",
+    ".contact-details"
+  ].forEach((selector) => {
+
+    const group = $(selector);
+
+    if (!group) {
+      return;
+    }
+
+
+    const cards = [...group.children].filter(
+      (child) => {
+
+        return child.matches(
+          ".profile-card, .project-card, .contact-detail-card"
+        );
+
+      }
+    );
+
+
+    cards.forEach((card, index) => {
+
+      card.style.setProperty(
+        "--reveal-delay",
+        `${Math.min(index * 75, 450)}ms`
+      );
+
+    });
+
+  });
+
+
+  /* =========================================
+     08. SCROLL STATE MANAGEMENT
+     Progress Bar
+     Sticky Header
+     Active Navigation
+     Back To Top Visibility
+  ========================================== */
+
+  const navLinks = $$(
+    '.nav-links a[href^="#"]'
+  );
+
+
+  const sections = navLinks
+
+    .map((link) => {
+
+      const target = $(
+        link.getAttribute("href")
+      );
+
+      return target
+        ? { link, target }
+        : null;
+
+    })
+
+    .filter(Boolean);
+
+
+  let scrollQueued = false;
+
+
+  const updateScrollState = () => {
+
+    const y =
+      window.scrollY ||
+      document.documentElement.scrollTop;
+
+
+    const max =
+      document.documentElement.scrollHeight -
+      window.innerHeight;
+
+
+    const progress =
+      max > 0
+        ? (y / max) * 100
+        : 0;
+
+
+    /* Scroll progress */
+
+    if (progressBar) {
+
+      progressBar.style.width =
+        `${Math.min(progress, 100)}%`;
+
+    }
+
+
+    /* Sticky header */
+
+    header?.classList.toggle(
+      "scrolled",
+      y > 24
+    );
+
+
+    /* Back to top visibility */
+
+    backToTop?.classList.toggle(
+      "show",
+      y > 500
+    );
+
+
+    /* Active navigation */
+
+    const marker = window.innerHeight * 0.38;
+
+    let current = null;
+
+
+    sections.forEach(({ link, target }) => {
+
+      const rect = target.getBoundingClientRect();
+
+      if (
+        rect.top <= marker &&
+        rect.bottom > marker
+      ) {
+
+        current = link;
+
+      }
+
+    });
+
+
+    if (
+      !current &&
+      y < 100 &&
+      sections.length
+    ) {
+
+      current = sections[0].link;
+
+    }
+
+
+    navLinks.forEach((link) => {
+
+      const active = link === current;
+
+      link.classList.toggle(
+        "active",
+        active
+      );
+
+
+      if (active) {
+
+        link.setAttribute(
+          "aria-current",
+          "location"
+        );
+
+      } else {
+
+        link.removeAttribute(
+          "aria-current"
+        );
+
+      }
+
+    });
+
+
+    scrollQueued = false;
+
+  };
+
+
+  /* Run scroll updates efficiently */
+
+  window.addEventListener(
+    "scroll",
+    () => {
+
+      if (scrollQueued) {
+        return;
+      }
+
+      scrollQueued = true;
+
+      window.requestAnimationFrame(
+        updateScrollState
+      );
+
+    },
+    { passive: true }
+  );
+
+
+  window.addEventListener(
+    "load",
+    updateScrollState,
+    { once: true }
+  );
+
+
+  updateScrollState();
+
+
+  /* =========================================
+     09. BACK TO TOP BUTTON
+  ========================================== */
+
+  backToTop?.addEventListener(
+    "click",
+    () => {
+
+      window.scrollTo({
+
+        top: 0,
+
+        behavior: reducedMotion
+          ? "auto"
+          : "smooth"
+
+      });
+
+    }
+  );
+
+
+  /* =========================================
+     10. HERO PARALLAX EFFECT
+  ========================================== */
+
+  const hero = $(".hero");
+
+  const orbs = $$(".hero-orb");
+
+
+  if (
+    hero &&
+    orbs.length &&
+    finePointer &&
+    !reducedMotion
+  ) {
+
+    hero.addEventListener(
+      "pointermove",
+      (event) => {
+
+        const rect = hero.getBoundingClientRect();
 
         const x =
-            (event.clientX /
-                window.innerWidth -
-                0.5);
-
+          (event.clientX - rect.left) /
+          rect.width - 0.5;
 
         const y =
-            (event.clientY /
-                window.innerHeight -
-                0.5);
+          (event.clientY - rect.top) /
+          rect.height - 0.5;
 
 
-        profileCard.style.transform =
-            `translate(
-                ${x * 7}px,
-                ${y * 7}px
-            )`;
+        orbs.forEach((orb, index) => {
 
-    }
-);
+          const depth = (index + 1) * 10;
 
+          orb.style.transform =
+            `translate3d(${x * depth}px, ${y * depth}px, 0)`;
 
-/* =========================================================
-   SMOOTH ANCHOR LINKS
-========================================================= */
+        });
 
-$$('a[href^="#"]').forEach(
-    (link) => {
-
-        link.addEventListener(
-            "click",
-            (event) => {
-
-                const targetID =
-                    link.getAttribute("href");
-
-
-                if (
-                    !targetID ||
-                    targetID === "#"
-                ) return;
-
-
-                const target =
-                    document.querySelector(
-                        targetID
-                    );
-
-
-                if (!target) return;
-
-
-                event.preventDefault();
-
-
-                target.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start"
-                });
-
-            }
-        );
-
-    }
-);
-
-
-/* =========================================================
-   FLOATING CONTACT BUTTON
-========================================================= */
-
-const floatingContact =
-    $("#floatingContact");
-
-
-if (floatingContact) {
-
-    floatingContact.addEventListener(
-        "click",
-        () => {
-
-            const contact =
-                $("#contact");
-
-
-            if (contact) {
-
-                contact.scrollIntoView({
-                    behavior: "smooth"
-                });
-
-            }
-
-        }
+      }
     );
 
-}
 
+    hero.addEventListener(
+      "pointerleave",
+      () => {
 
-/* =========================================================
-   BUTTON CLICK EFFECT
-========================================================= */
+        orbs.forEach((orb) => {
 
-$$(".button, .project-button, .nav-button").forEach(
-    (button) => {
+          orb.style.transform = "";
 
-        button.addEventListener(
-            "click",
-            () => {
+        });
 
-                button.style.transform =
-                    "scale(0.97)";
-
-
-                setTimeout(
-                    () => {
-
-                        button.style.transform =
-                            "";
-
-                    },
-                    120
-                );
-
-            }
-        );
-
-    }
-);
-
-
-/* =========================================================
-   MAGNETIC HERO BUTTONS
-========================================================= */
-
-$$(".hero-buttons .button").forEach(
-    (button) => {
-
-        button.addEventListener(
-            "mousemove",
-            (event) => {
-
-                if (
-                    window.innerWidth < 800
-                ) return;
-
-
-                const rect =
-                    button.getBoundingClientRect();
-
-
-                const x =
-                    event.clientX -
-                    rect.left -
-                    rect.width / 2;
-
-
-                const y =
-                    event.clientY -
-                    rect.top -
-                    rect.height / 2;
-
-
-                button.style.transform =
-                    `translate(
-                        ${x * 0.08}px,
-                        ${y * 0.08}px
-                    )`;
-
-            }
-        );
-
-
-        button.addEventListener(
-            "mouseleave",
-            () => {
-
-                button.style.transform =
-                    "";
-
-            }
-        );
-
-    }
-);
-
-
-/* =========================================================
-   CONTACT FORM
-========================================================= */
-
-const contactForm =
-    $("#contactForm");
-
-
-if (contactForm) {
-
-    contactForm.addEventListener(
-        "submit",
-        () => {
-
-            const button =
-                contactForm.querySelector(
-                    ".send-button"
-                );
-
-
-            if (button) {
-
-                button.innerHTML =
-                    `SENDING <span>↗</span>`;
-
-            }
-
-        }
+      }
     );
 
-}
+  }
 
 
-/* =========================================================
-   CONSOLE SIGNATURE
-========================================================= */
+  /* =========================================
+     11. PROJECT CARD TILT EFFECT
+  ========================================== */
 
-console.log(
-    "%cKhan Abdul Kalam",
-    `
-        color: #c8ff3d;
-        font-size: 20px;
-        font-weight: bold;
-    `
-);
+  if (
+    finePointer &&
+    !reducedMotion
+  ) {
 
-console.log(
-    "%cDeveloper Portfolio",
-    `
-        color: #888;
-        font-size: 12px;
-    `
-);
+    $$(".project-card").forEach((card) => {
 
-console.log(
-    "%cBuilt with HTML • CSS • JavaScript",
-    `
-        color: #555;
-        font-size: 10px;
-    `
-);
+      card.addEventListener(
+        "pointermove",
+        (event) => {
+
+          const rect = card.getBoundingClientRect();
+
+          const x =
+            (event.clientX - rect.left) /
+            rect.width;
+
+          const y =
+            (event.clientY - rect.top) /
+            rect.height;
 
 
-/* =========================================================
-   PAGE READY
-========================================================= */
+          const rotateX = (0.5 - y) * 3;
 
-document.body.classList.add(
-    "page-ready"
-);
+          const rotateY = (x - 0.5) * 3;
+
+
+          card.style.transform =
+            `perspective(1100px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-3px)`;
+
+        }
+      );
+
+
+      card.addEventListener(
+        "pointerleave",
+        () => {
+
+          card.style.transform = "";
+
+        }
+      );
+
+    });
+
+  }
+    /* =========================================
+     12. IMAGE ERROR HANDLING
+  ========================================== */
+
+  $$("img").forEach((image) => {
+
+    image.addEventListener(
+      "error",
+      () => {
+
+        image.classList.add(
+          "image-unavailable"
+        );
+
+        image.setAttribute(
+          "aria-label",
+          "Image unavailable. Check assets/images/kalam-profile.jpg"
+        );
+
+      }
+    );
+
+  });
+
+
+  /* =========================================
+     13. CURRENT YEAR
+  ========================================== */
+
+  if (currentYear) {
+
+    currentYear.textContent =
+      new Date().getFullYear();
+
+  }
+
+
+  /* =========================================
+     14. SECURE EXTERNAL LINKS
+  ========================================== */
+
+  $$('a[target="_blank"]').forEach((link) => {
+
+    link.setAttribute(
+      "rel",
+      "noopener noreferrer"
+    );
+
+  });
+
+
+  /* =========================================
+     15. JAVASCRIPT ENABLED CLASS
+  ========================================== */
+
+  document.documentElement.classList.add(
+    "js-enabled"
+  );
+
+
+  /* =========================================
+     16. CONSOLE BRANDING
+  ========================================== */
+
+  console.info(
+    "%cKhan Abdul Kalam · Portfolio",
+    "color:#B69A83;font-size:16px;font-weight:800"
+  );
+
+
+})();
